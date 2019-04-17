@@ -9,24 +9,6 @@ import './styles.css';
 
 registerLocale('ru', ru);
 
-class CustomCalendarInput extends React.Component {
-    static propTypes = {
-        onClick: PropTypes.func,
-        value: PropTypes.string,
-        placeholderText: PropTypes.string
-    };
-    render () {
-        console.log(this.props);
-        return (
-            <button
-                className="btn btn-info btn-block"
-                onClick={this.props.onClick}>
-                {this.props.placeholderText}: {this.props.value ? this.props.value : 'Нет даты'}
-            </button>
-        )
-    }
-}
-
 class SearchForm extends React.Component {
     static propTypes = {
         onChange: PropTypes.func,
@@ -177,7 +159,7 @@ class UsersTable extends React.Component {
                     </tr>
                     </thead>
                     <tbody>
-                    {rows}
+                        {rows}
                     </tbody>
                 </table>
             </div>
