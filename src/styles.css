@@ -1,0 +1,8 @@
+
+/* date picker */
+.input-group { flex-wrap: nowrap; }
+.input-group .react-datepicker-wrapper { flex: 1 1 auto; }
+.input-group .react-datepicker__input-container { display: block; }
+.input-group .react-datepicker-wrapper .form-control { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+
