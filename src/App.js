@@ -208,7 +208,6 @@ class App extends React.Component {
                 });
             })
             .catch((error) => {
-                // handle error
                 console.log(error);
             });
     }
