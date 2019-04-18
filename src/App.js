@@ -12,6 +12,8 @@ registerLocale('ru', ru);
 class SearchForm extends React.Component {
     static propTypes = {
         onChange: PropTypes.func,
+        onDateChange: PropTypes.func,
+        onFiltersClear: PropTypes.func,
         filters: PropTypes.shape({
             lastName: PropTypes.string,
             city: PropTypes.string,
@@ -32,7 +34,10 @@ class SearchForm extends React.Component {
                                 <span>Фамилия</span>
                             </span>
                             </div>
-                            <input type="text" className="form-control" onChange={(e) => this.props.onChange('lastName', e.target.value)} />
+                            <input type="text" className="form-control"
+                                   name="lastName"
+                                   value={this.props.filters.lastName}
+                                   onChange={this.props.onChange} />
                         </div>
 
                     </div>
@@ -46,7 +51,10 @@ class SearchForm extends React.Component {
                                 </span>
                             </span>
                             </div>
-                            <input type="text" className="form-control" onChange={(e) => this.props.onChange('phone', e.target.value)} />
+                            <input type="text" className="form-control"
+                                   name="phone"
+                                   value={this.props.filters.phone}
+                                   onChange={this.props.onChange} />
                         </div>
 
                     </div>
@@ -62,7 +70,10 @@ class SearchForm extends React.Component {
                                 </span>
                             </span>
                             </div>
-                            <input type="text" className="form-control" onChange={(e) => this.props.onChange('city', e.target.value)} />
+                            <input type="text" className="form-control"
+                                   name="city"
+                                   value={this.props.filters.city}
+                                   onChange={this.props.onChange} />
                         </div>
 
                     </div>
@@ -78,8 +89,9 @@ class SearchForm extends React.Component {
                             </div>
                             <DatePicker
                                 className="form-control"
+                                name="dateOfBirth"
                                 selected={this.props.filters.dateOfBirth}
-                                onChange={(date) => this.props.onChange('dateOfBirth', date)}
+                                onChange={this.props.onDateChange}
                                 dateFormat="dd/MM/yyyy"
                                 locale="ru"
                                 placeholderText="Выбрать дату"
@@ -90,7 +102,7 @@ class SearchForm extends React.Component {
 
                     </div>
                     <div className="col-lg-2">
-                        <button type="button" className="btn btn-info btn-block">
+                        <button type="button" className="btn btn-info btn-block" onClick={this.props.onFiltersClear}>
                             Сброс
                         </button>
                     </div>
@@ -133,9 +145,59 @@ class UserRow extends React.Component {
 }
 
 class UsersTable extends React.Component {
+
+    getValueForFilter(filterName, user) {
+        let value;
+        switch (filterName) {
+            case 'lastName':
+                value = user.name.last;
+                break;
+            case 'phone':
+                value = user.phone;
+                break;
+            case 'city':
+                value = user.location.city;
+                break;
+            case 'dateOfBirth':
+                value = user.dob;
+                break;
+            default:
+                value = ''
+        }
+        return value;
+    }
+
+    filtersValidation(user) {
+        let itemValue, filterValue, result = true;
+        for (let name in this.props.filters) {
+            if (this.props.filters.hasOwnProperty(name)) {
+                filterValue = this.props.filters[name];
+                if (!filterValue) {
+                    continue;
+                }
+                switch (name) {
+                    case 'dateOfBirth':
+                        itemValue = new Date(this.getValueForFilter(name, user));
+                        const filterDateDayValue = new Date(filterValue.getFullYear(), filterValue.getMonth(), filterValue.getDate()).getTime();
+                        result = new Date(itemValue.getFullYear(), itemValue.getMonth(), itemValue.getDate()).getTime() === filterDateDayValue;
+                        break;
+                    default:
+                        result = (new RegExp(`^${filterValue}`, 'i')).test(this.getValueForFilter(name, user));
+                }
+                if (!result) {
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
     render() {
         const rows = [];
         this.props.users.forEach((user) => {
+            if (!this.filtersValidation(user)) {
+                return;
+            }
             rows.push(
                 <UserRow
                     user={user}
@@ -170,7 +232,6 @@ class UsersTable extends React.Component {
 class App extends React.Component {
     constructor(props) {
         super(props);
-        this.timer = null;
         this.state = {
             users: [],
             filters: {
@@ -194,16 +255,31 @@ class App extends React.Component {
             });
     }
 
-    onFilterChange = (name, value) => {
-        clearTimeout(this.timer);
-        this.timer = setTimeout(() => {
-            console.log('onFilterChange', name, value);
-            const filters = Object.assign({}, this.state.filters, {[name]: value});
-            this.setState({
-                filters: filters
-            });
-        }, 400);
+    handleFilterChange(event) {
+        const filters = Object.assign({}, this.state.filters, {[event.target.name]: event.target.value});
+        this.setState({
+            filters: filters
+        });
     };
+
+    handleFilterDateChange(date) {
+        const filters = Object.assign({}, this.state.filters, {'dateOfBirth': date});
+        this.setState({
+            filters: filters
+        });
+    };
+
+    handleFiltersClear() {
+        const filters = Object.assign({}, this.state.filters, {
+            lastName: '',
+            city: '',
+            phone: '',
+            dateOfBirth: null
+        });
+        this.setState({
+            filters: filters
+        });
+    }
 
     render() {
         return (
@@ -212,9 +288,13 @@ class App extends React.Component {
 
                     <SearchForm
                         filters={this.state.filters}
-                        onChange={this.onFilterChange.bind(this)} />
+                        onFiltersClear={this.handleFiltersClear.bind(this)}
+                        onDateChange={this.handleFilterDateChange.bind(this)}
+                        onChange={this.handleFilterChange.bind(this)} />
 
-                    <UsersTable users={this.state.users} />
+                    <UsersTable
+                        filters={this.state.filters}
+                        users={this.state.users} />
 
                 </div>
             </div>
