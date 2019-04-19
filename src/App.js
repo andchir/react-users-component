@@ -113,38 +113,91 @@ class SearchForm extends React.Component {
     }
 }
 
-class UserRow extends React.Component {
-    render() {
-        const user = this.props.user;
+function UserRow(props) {
         return (
             <tr>
                 <th>
-                    {user.id.value}
+                    {props.user.id.value}
                 </th>
                 <td>
-                    {user.name.title} {user.name.first}
+                    {props.user.name.title} {props.user.name.first}
                 </td>
                 <td>
-                    {user.name.last}
+                    {props.user.name.last}
                 </td>
                 <td>
-                    {user.email}
+                    {props.user.email}
                 </td>
                 <td>
-                    {user.phone}
+                    {props.user.phone}
                 </td>
                 <td>
-                    {user.location.city}
+                    {props.user.location.city}
                 </td>
                 <td>
-                    {user.dob}
+                    {props.user.dob}
                 </td>
             </tr>
         );
-    }
 }
 
+function Pagination(props) {
+    if (props.totalPages < 2) {
+        return null;
+    }
+    const pages = [...Array(props.totalPages).keys()].map((i) => {
+        const pageNumber = i + 1;
+        const className = 'page-item' + (i + 1 === props.currentPage ? ' active' : '');
+        return (
+            <li className={className} key={i}>
+                <a className="page-link" href={`#page${i + 1}`} onClick={e => props.onPageChange(i + 1, e)}>{pageNumber}</a>
+            </li>
+        );
+    });
+    const previousPageNumber = props.currentPage > 1
+        ? props.currentPage - 1
+        : 1;
+    const nextPageNumber = props.currentPage < props.totalPages
+        ? props.currentPage + 1
+        : props.totalPages;
+    return (
+        <nav aria-label="pagination">
+            <ul className="pagination">
+                <li className="page-item">
+                    <a className="page-link" href={`#page${previousPageNumber}`} onClick={e => props.onPageChange(previousPageNumber, e)}>
+                        &laquo;
+                    </a>
+                </li>
+                {pages}
+                <li className="page-item">
+                    <a className="page-link" href={`#page${nextPageNumber}`} onClick={e => props.onPageChange(nextPageNumber, e)}>
+                        &raquo;
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    );
+}
+
+Pagination.propTypes = {
+    currentPage: PropTypes.number,
+    totalPages: PropTypes.number,
+    onPageChange: PropTypes.func
+};
+
 class UsersTable extends React.Component {
+    static propTypes = {
+        filters: PropTypes.object,
+        users: PropTypes.array
+    };
+
+    constructor(props) {
+        super(props);
+        this.state = {
+            currentPage: 1,
+            pageSize: 15
+        };
+    }
 
     getValueForFilter(filterName, user) {
         let value;
@@ -192,12 +245,28 @@ class UsersTable extends React.Component {
         return result;
     }
 
+    handlePageChange(pageNumber, e) {
+        e.preventDefault();
+        this.setState({
+            currentPage: pageNumber
+        });
+    }
+
     render() {
-        const rows = [];
+        let usersFiltered = [];
         this.props.users.forEach((user) => {
-            if (!this.filtersValidation(user)) {
-                return;
+            if (this.filtersValidation(user)) {
+                usersFiltered.push(user);
             }
+        });
+
+        const currentPos = (this.state.currentPage - 1) * this.state.pageSize,
+            rows = [],
+            totalPages = Math.ceil(usersFiltered.length / this.state.pageSize);
+
+        usersFiltered = usersFiltered.slice(currentPos, currentPos + this.state.pageSize);
+
+        usersFiltered.forEach((user) => {
             rows.push(
                 <UserRow
                     user={user}
@@ -207,23 +276,30 @@ class UsersTable extends React.Component {
         });
 
         return (
-            <div className="table-responsive mb-3">
-                <table className="table table-bordered">
-                    <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Имя</th>
-                        <th>Фамилия</th>
-                        <th>Адрес эл. почты</th>
-                        <th>Телефон</th>
-                        <th>Город</th>
-                        <th>Дата рождения</th>
-                    </tr>
-                    </thead>
-                    <tbody>
+            <div>
+                <div className="table-responsive mb-3">
+                    <table className="table table-bordered">
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Имя</th>
+                            <th>Фамилия</th>
+                            <th>Адрес эл. почты</th>
+                            <th>Телефон</th>
+                            <th>Город</th>
+                            <th>Дата рождения</th>
+                        </tr>
+                        </thead>
+                        <tbody>
                         {rows}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
+
+                <Pagination
+                    totalPages={totalPages}
+                    onPageChange={this.handlePageChange.bind(this)}
+                    currentPage={this.state.currentPage} />
             </div>
         );
     };
@@ -234,6 +310,7 @@ class App extends React.Component {
         super(props);
         this.state = {
             users: [],
+            totalItems: 0,
             filters: {
                 lastName: '',
                 city: '',
@@ -247,7 +324,8 @@ class App extends React.Component {
         axios.get('users.json')
             .then((response) => {
                 this.setState({
-                    users: response.data.results
+                    users: response.data.results,
+                    totalItems: response.data.info.results
                 });
             })
             .catch((error) => {
